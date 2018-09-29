@@ -34,7 +34,7 @@ void loop() {
   double humidity = DHT.humidity;
   dataValues[0] = temperature;
   dataValues[1] = humidity;
-
+  //the DHT11 is only precise to integer values so I dunno why the library uses doubles. I might change this later to reduce the transmission by 75%.
   Serial.println(String(temperature) + "\t" + String(humidity) + "\t" + String(sizeof(dataValues)));
   
   rf95.send((uint8_t*) dataValues, sizeof(dataValues));
