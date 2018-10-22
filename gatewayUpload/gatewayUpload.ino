@@ -30,15 +30,16 @@ void loop() {
   uint8_t len = sizeof(buf);
   if (rf95.waitAvailableTimeout(3000)) { 
     // Should be a reply message for us now   
-    if (rf95.recv(buf, &len)) {
-      double* d = (double*)buf;
-      String request = "https://api.thingspeak.com/update?api_key=4ZSKIBA1TZHJPS3U&field2=" + String(d[0]);
-      request += "&field3=" + String(d[1]);
+    if (rf95.recv(buf, &len) && buf[0] == 55) {
+      String request = "https://api.thingspeak.com/update?api_key=4ZSKIBA1TZHJPS3U&field2=" + String(buf[1]);
+      request += "&field3=" + String(buf[2]);
+      request +="&field1=" + String(buf[3]);
+      
       p.begin("curl");
       p.addParameter("-k");
       p.addParameter(request);
       p.run();
-      delay(15000);
+      delay(15000);  
     }
   }
 }

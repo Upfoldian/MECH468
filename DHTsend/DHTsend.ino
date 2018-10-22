@@ -5,12 +5,17 @@
 RH_RF95 rf95;
 float frequency = 868.0;
 
-//Sensor libs and variables
+//DHT11 Sensor libs and variables
 // Documentation http://playground.arduino.cc/Main/DHTLib
 #include <dht.h>
 
 dht DHT;
 const int DHTpin = 7;
+
+// OpenPIR sensor libs and variables
+
+const int digitalPIR = 8;
+const int analogPIR = A0;
 
 
 void loraInit() {
@@ -22,40 +27,45 @@ void loraInit() {
   rf95.setCodingRate4(5);  // Setup Coding Rate:5(4/5),6(4/6),7(4/7),8(4/8) 
 }
 
+
 void setup() {
   Serial.begin(9600);
+  pinMode(digitalPIR, INPUT);
+  pinMode(DHTpin, INPUT);
   loraInit();
 }
+unsigned long prevTime = millis();
+bool PIRtoggle = false;
+uint8_t count = 0;
 
 void loop() {
-  DHT.read11(DHTpin);
-  double dataValues[2];
-  double temperature = DHT.temperature;
-  double humidity = DHT.humidity;
-  dataValues[0] = temperature;
-  dataValues[1] = humidity;
-  //the DHT11 is only precise to integer values so I dunno why the library uses doubles. I might change this later to reduce the transmission by 75%.
-  Serial.println(String(temperature) + "\t" + String(humidity) + "\t" + String(sizeof(dataValues)));
-  
-  rf95.send((uint8_t*) dataValues, sizeof(dataValues));
-  rf95.waitPacketSent();
-
-  
-  /* If I need to send back the data in future
-  uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-  uint8_t len = sizeof(buf);
-
-  if (rf95.waitAvailableTimeout(3000)) { 
-    if (rf95.recv(buf, &len)) {
-      Serial.print("reply: ");
-      Serial.println((char*)buf);
-    } else {
-      Serial.println("recv failed");
-    }
-  } else {
-    Serial.println("No reply, is LoRa server running?");
+  if (digitalRead(digitalPIR) == HIGH && PIRtoggle == false) {
+    PIRtoggle = true;
+    count++;
+  } else if (digitalRead(digitalPIR) == LOW) {
+    PIRtoggle = false;
   }
-  */
+  
+  DHT.read11(DHTpin);
+  uint8_t dataValues[4];
+  uint8_t temperature = (uint8_t)DHT.temperature;
+  uint8_t humidity = (uint8_t)DHT.humidity;
+  dataValues[0] = 55;
+  dataValues[1] = temperature;
+  dataValues[2] = humidity;
+  dataValues[3] = count;
+  //the DHT11 is only precise to integer values so I dunno why the library uses doubles. 
+  //I might change this later to reduce the transmission data packet by 75%.
+  //Serial.println(String(dataValues[1]) + "\t" + String(dataValues[2]) + "\t" + String(dataValues[3]));
+  
+  unsigned long curTime = millis();
+  if (curTime - prevTime > 15000) {
+    Serial.println("SEND: " + String(dataValues[1]) + "\t" + String(dataValues[2]) + "\t" + String(dataValues[3]));
+    rf95.send((uint8_t*) dataValues, sizeof(dataValues));
+    rf95.waitPacketSent();
+    count = 0;
+    prevTime = curTime;
+  }
   delay(300);
 }
 
