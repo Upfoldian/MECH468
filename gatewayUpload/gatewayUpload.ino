@@ -31,10 +31,14 @@ void loop() {
   if (rf95.waitAvailableTimeout(3000)) { 
     // Should be a reply message for us now   
     if (rf95.recv(buf, &len) && buf[0] == 55) {
+      // Field 1 = People
+      // Field 2 = Temp
+      // Field 3 = Humid
+      // Field 8 = MotorPosition
       String request = "https://api.thingspeak.com/update?api_key=4ZSKIBA1TZHJPS3U&field2=" + String(buf[1]);
       request += "&field3=" + String(buf[2]);
       request +="&field1=" + String(buf[3]);
-      
+      request +="&field8=" + String(buf[4]);
       p.begin("curl");
       p.addParameter("-k");
       p.addParameter(request);
